@@ -1,5 +1,5 @@
 <<<<<<< HEAD
-# Warehouse-Automation-Stacker_AGV-
+# Warehouse-Automation(Stacker Crane & AGV)
 =======
 # Getting Started with Create React App
 
