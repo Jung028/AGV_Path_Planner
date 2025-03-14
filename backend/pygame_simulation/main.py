@@ -1,5 +1,6 @@
-from simulation import Simulation
+
+# main.py (Entry point)
+from game import Game
 
 if __name__ == "__main__":
-    sim = Simulation()
-    sim.run()
+    Game().run()
