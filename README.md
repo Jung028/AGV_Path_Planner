@@ -1,74 +1,86 @@
-<<<<<<< HEAD
-# Warehouse-Automation(Stacker Crane & AGV)
-=======
-# Getting Started with Create React App
+# AGV Path Planner
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
+This project is an AGV (Automated Guided Vehicle) path planning simulator using **Pygame**. Users can click on a location to set different path types (Turning, Idle, Normal, Charging), place an AGV, and move it along selected paths. The simulation runs on a clean map instead of a grid.
 
-## Available Scripts
+## Features
+- Click anywhere on the map to create waypoints.
+- Select different types of waypoints via a dropdown menu.
+- Place an AGV anywhere on the map.
+- Click on the AGV to select it, choose a destination, and press Enter to move it.
+- Object-Oriented Design for scalability.
 
-In the project directory, you can run:
+## Installation
+### Prerequisites
+Make sure you have **Python 3.8+** installed.
 
-### `npm start`
+### Clone the Repository
+```bash
+git clone https://github.com/your-username/agv-path-planner.git
+cd agv-path-planner
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Install Dependencies
+```bash
+pip install pygame
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Run the Simulation
+```bash
+python main.py
+```
 
-### `npm test`
+## Git Workflow
+### Creating a New Branch
+Before making any changes, create a separate branch:
+```bash
+git checkout -b feature/ui-improvements
+```
+This ensures that the `main` branch remains stable.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Making Changes & Committing
+After modifying the code, check your changes:
+```bash
+git status
+```
+Then, stage and commit them:
+```bash
+git add .
+git commit -m "Improved dropdown UI and removed grid for a clean map"
+```
 
-### `npm run build`
+### Pushing the Branch to GitHub
+```bash
+git push origin feature/ui-improvements
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+### Creating a Pull Request
+1. Go to your GitHub repository.
+2. Click **"Compare & pull request"** for `feature/ui-improvements`.
+3. Add a description of your changes.
+4. Click **"Create pull request"** to submit for review.
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+### Merging the Branch
+Once approved, merge it into `main`:
+```bash
+git checkout main
+git pull origin main
+git merge feature/ui-improvements
+git push origin main
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Deleting the Branch
+After merging, clean up old branches:
+```bash
+git branch -d feature/ui-improvements
+git push origin --delete feature/ui-improvements
+```
 
-### `npm run eject`
+## Future Improvements
+- Add smooth animations for AGV movement.
+- Implement pathfinding algorithms (e.g., A*).
+- Improve UI with interactive controls.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+## License
+MIT License
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
->>>>>>> cd80808 (Initialize project using Create React App)

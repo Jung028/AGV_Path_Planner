@@ -18,6 +18,9 @@ GREEN = (0, 255, 0)
 YELLOW = (255, 255, 0)
 LIGHT_GRAY = (220, 220, 220)
 HIGHLIGHT_COLOR = (173, 216, 230)
+DROPDOWN_BG = (180, 180, 180)  # New dropdown background color
+DROPDOWN_BORDER = (50, 50, 50)  # New dropdown border color
+
 
 # Initialize pygame
 pygame.init()
