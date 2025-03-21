@@ -1,4 +1,5 @@
-from dijkstra import dijkstras
+from algorithm.dijkstra import dijkstras
+from algorithm.aco import aco
 import pygame # type: ignore
 import heapq
 import json
@@ -133,7 +134,7 @@ def edit_map(map_name):
                     if ROBOT is None or END is None:
                         print("Error: Place both the robot and the end position before running Dijkstra.")
                     else:
-                        path = dijkstras(MAZE ,ROBOT, END)  # Now we are sure both are set
+                        path = aco(MAZE ,ROBOT, END)  # Now we are sure both are set
                         animate_robot(screen, path)
                 elif event.key == pygame.K_f:
                     save_map(map_name, MAZE, ROBOT, END)
