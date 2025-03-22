@@ -1,194 +1,307 @@
-from dijkstra import dijkstras
-import pygame # type: ignore
-import heapq
-import json
-import os
-import time
+from fastapi import FastAPI, Query
+from pydantic import BaseModel
+import logging
+from typing import List, Optional, Dict
 
-# Constants
-WIDTH, HEIGHT = 600, 600
-ROWS, COLS = 40, 40
-CELL_SIZE = WIDTH // COLS
+# Initialize FastAPI app
+app = FastAPI()
 
-# Colors
-WHITE = (255, 255, 255)
-BLACK = (0, 0, 0)
-BLUE = (0, 0, 255)
-GREEN = (0, 255, 0)
-RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-PURPLE = (255, 0, 128)
+# Setup logging
+logging.basicConfig(filename="api_requests.log", level=logging.INFO, format="%(asctime)s - %(message)s")
 
-LIGHT_BLUE = (173, 216, 230)  # Soft blue for the trail
-ORANGE = (255, 165, 0)  # Orange for the previous position
+# ========================= SKU SYNC =========================
+class Packing(BaseModel):
+    sku_packing_spec: str
+    primary: Dict[str, float]
+    secondary: Optional[Dict[str, float]] = None
+    tertiary: Optional[Dict[str, float]] = None
 
+class SKU(BaseModel):
+    owner_code: str
+    sku_id: str
+    sku_code: str
+    sku_name: str
+    sku_price: float
+    unit: str
+    remark: str
+    dimensions: Dict[str, float]
+    weight: Dict[str, float]
+    stock_limits: Dict[str, int]
+    sku_shelf_life: int
+    sku_specification: str
+    sku_status: int
+    sku_abc: str
+    is_sequence_sku: int
+    sku_production_location: str
+    sku_brand: str
+    sku_attributes: Dict[str, str]
+    sku_pic_url: str
+    is_bar_code_full_update: int
+    sku_bar_code_list: List[Dict[str, str]]
+    sku_packing: List[Packing]
 
+class SKUSyncRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[SKU]]
 
-MAPS_DIR = "maps"
-if not os.path.exists(MAPS_DIR):
-    os.makedirs(MAPS_DIR)
-
-# Load Maps
-def load_maps():
-    return [f for f in os.listdir(MAPS_DIR) if f.endswith(".json")]
-
-# Save Map to File
-def save_map(map_name, maze, robot, end):
-    data = {"maze": maze, "robot": robot, "end": end}
-    with open(os.path.join(MAPS_DIR, f"{map_name}.json"), "w") as f:
-        json.dump(data, f)
-    print("Map saved!")
-
-
-# Map Editor
-def edit_map(map_name):
-    global MAZE, ROBOT, END
-    if map_name == "new_map":
-        MAZE = [[0 for _ in range(COLS)] for _ in range(ROWS)]
-        ROBOT, END = None, None
-    else:
-        with open(os.path.join(MAPS_DIR, f"{map_name}.json"), "r") as f:
-            data = json.load(f)
-            MAZE = data["maze"]
-            ROBOT = tuple(data.get("robot", (0, 0)))  # Default to (0,0) if missing
-            END = tuple(data.get("end", (ROWS-1, COLS-1)))  # Default to bottom-right
+@app.post("/api/inventory/sync")
+async def sku_sync(request: SKUSyncRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles SKU Synchronization"""
     
+    logging.info(f"SKU Sync Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received SKU Sync Request: {request.dict()}")
 
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Dijkstra Robot Simulation")
+    return {
+        "message": "SKU Synchronization Successful",
+        "warehouse": warehouse,
+        "owner": owner,
+        "sku_count": len(request.body["sku_list"]),
+    }
 
+# ========================= PUTAWAY ORDER CREATION =========================
+class SKUDetail(BaseModel):
+    sku_code: str
+    sku_level: int
+    owner_code: str
+    sku_amount: int
+    sku_out_batch_code: Optional[str] = None
+    sku_production_date: Optional[int] = None
+    sku_expiration_date: Optional[int] = None
 
+class ReceiptInfo(BaseModel):
+    receipt_code: str
+    receipt_type: int
+    pallet_code: str
+    creation_date: int
+    supplier_code: str
+    carrier_code: str
+    remark: str
 
-    robot_path = []  # Store the robot's path
+class Receipt(BaseModel):
+    receipt_info: ReceiptInfo
+    sku_details: List[SKUDetail]
 
-    def draw_grid(robot_pos=None):
-        screen.fill(WHITE)
-        
-        for row in range(ROWS):
-            for col in range(COLS):
-                rect = pygame.Rect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE)
-                
-                if MAZE[row][col] == 1:
-                    pygame.draw.rect(screen, BLACK, rect)  # Walls
-                
-                pygame.draw.rect(screen, WHITE, rect, 1)  # Grid lines
+class PutawayRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[Receipt]]
 
-        if END:
-            pygame.draw.rect(screen, RED, (END[1] * CELL_SIZE, END[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+@app.post("/api/putaway/create")
+async def putaway_order(request: PutawayRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles Putaway Order Creation"""
+    
+    logging.info(f"Putaway Order Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received Putaway Order Request: {request.dict()}")
 
-        if ROBOT:
-            pygame.draw.rect(screen, PURPLE, (ROBOT[1] * CELL_SIZE, ROBOT[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))
+    return {
+        "message": "Putaway Order Created Successfully",
+        "warehouse": warehouse,
+        "owner": owner,
+        "receipt_count": len(request.body["receipts"]),
+    }
 
-        # Draw the robot's path
-        for pos in robot_path:
-            pygame.draw.rect(screen, LIGHT_BLUE, (pos[1] * CELL_SIZE, pos[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))  # Trail color
+# ========================= PUTAWAY ORDER CONFIRMATION =========================
+class ConfirmSKUDetail(BaseModel):
+    sku_code: str
+    owner_code: str
+    sku_level: int
+    sku_receipt_flag: int
+    sku_amount: int
 
-        if robot_path:  
-            last_pos = robot_path[-1]  # Last visited position
-            pygame.draw.rect(screen, ORANGE, (last_pos[1] * CELL_SIZE, last_pos[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))  # Mark last position
+class ConfirmReceiptInfo(BaseModel):
+    receipt_code: str
+    pallet_code: str
+    receipt_type: int
+    receipt_status: int
+    status: int
+    completion_time: int
 
-        if robot_pos:
-            robot_path.append(robot_pos)  # Add current position to path
-            pygame.draw.rect(screen, PURPLE, (robot_pos[1] * CELL_SIZE, robot_pos[0] * CELL_SIZE, CELL_SIZE, CELL_SIZE))  # Draw robot
+class ConfirmReceipt(BaseModel):
+    receipt_info: ConfirmReceiptInfo
+    sku_details: List[ConfirmSKUDetail]
 
-        pygame.display.flip()
+class PutawayConfirmRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[ConfirmReceipt]]
 
+@app.post("/api/putaway/confirm")
+async def putaway_confirm(request: PutawayConfirmRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles Putaway Order Confirmation"""
+    
+    logging.info(f"Putaway Confirm Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received Putaway Confirm Request: {request.dict()}")
 
-    # Animate Robot Movement
-    def animate_robot(screen, path):
-        """ Animate the robot moving along the path. """
-        for pos in path:
-            draw_grid(pos)
-            pygame.time.delay(200)  # Slow down animation
-        print("Robot reached the end!")
-        
-    def handle_click(pos, mode):
-        global ROBOT, END
-        row, col = pos[1] // CELL_SIZE, pos[0] // CELL_SIZE
-        if mode == 'wall':
-            MAZE[row][col] = 1 - MAZE[row][col]
-        elif mode == 'robot':
-            ROBOT = (row, col)
-        elif mode == 'end':
-            END = (row, col)
-        draw_grid()
-
-    draw_grid()
-    mode = 'wall'  # Default mode
-    running = True
-    running = True
-    while running:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
-                    mode = 'robot'
-                elif event.key == pygame.K_e:
-                    mode = 'end'
-                elif event.key == pygame.K_w:
-                    mode = 'wall'
-                elif event.key == pygame.K_SPACE:
-                    if ROBOT is None or END is None:
-                        print("Error: Place both the robot and the end position before running Dijkstra.")
-                    else:
-                        path = dijkstras(MAZE ,ROBOT, END)  # Now we are sure both are set
-                        animate_robot(screen, path)
-                elif event.key == pygame.K_f:
-                    save_map(map_name, MAZE, ROBOT, END)
-                elif event.key == pygame.K_m:
-                    running = False
-                    main_menu()
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = pygame.mouse.get_pos()
-                row, col = y // CELL_SIZE, x // CELL_SIZE
-                if mode == 'wall':
-                    MAZE[row][col] = 1 - MAZE[row][col]
-                elif mode == 'robot':
-                    ROBOT = (row, col)
-                    draw_grid(ROBOT)  # ✅ Fix: Update immediately after placing the robot
-                elif mode == 'end':
-                    END = (row, col)
-                draw_grid(ROBOT)  # ✅ Ensure grid updates after changes
-
-    pygame.quit()
+    return {
+        "message": "Putaway Order Confirmed Successfully",
+        "warehouse": warehouse,
+        "owner": owner,
+        "receipt_count": len(request.body["receipts"]),
+    }
 
 
-# Main Menu
-def main_menu():
-    pygame.init()
-    screen = pygame.display.set_mode((WIDTH, HEIGHT))
-    pygame.display.set_caption("Map Selector")
-    font = pygame.font.Font(None, 36)
+# ========================= PUTAWAY ORDER CANCELLATION =========================
+class CancelReceiptInfo(BaseModel):
+    warehouse_code: str
+    receipt_code: str
+    owner_code: str
+    cancel_date: int
+    remark: Optional[str] = ""
 
-    running = True
-    while running:
-        screen.fill(WHITE)
-        maps = load_maps()
-        y_offset = 50
-        for i, map_name in enumerate(maps):
-            text_surface = font.render(map_name, True, BLACK)
-            screen.blit(text_surface, (50, y_offset + i * 40))
+class CancelReceipt(BaseModel):
+    receipt_info: CancelReceiptInfo
 
-        create_text = font.render("+ Create New Map", True, GREEN)
-        screen.blit(create_text, (50, y_offset + len(maps) * 40 + 20))
+class PutawayCancelRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[CancelReceipt]]
 
-        pygame.display.flip()
+@app.post("/api/putaway/cancel")
+async def putaway_cancel(request: PutawayCancelRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles Putaway Order Cancellation"""
+    
+    logging.info(f"Putaway Cancel Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received Putaway Cancel Request: {request.dict()}")
 
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                running = False
-            elif event.type == pygame.MOUSEBUTTONDOWN:
-                x, y = pygame.mouse.get_pos()
-                if y > y_offset + len(maps) * 40:  # Clicked on "Create New Map"
-                    edit_map("new_map")
-                else:
-                    index = (y - y_offset) // 40
-                    if 0 <= index < len(maps):
-                        edit_map(maps[index].replace(".json", ""))
+    return {
+        "message": "Putaway Order Canceled Successfully",
+        "warehouse": warehouse,
+        "owner": owner,
+        "receipt_count": len(request.body["receipts"]),
+    }
 
-    pygame.quit()
 
-if __name__ == "__main__":
-    main_menu()
+
+# ========================= PICK ORDER CREATION =========================
+class PrintDetails(BaseModel):
+    type: int
+    content: str
+
+class CarrierDetails(BaseModel):
+    type: int
+    code: str
+    name: str
+    waybill_code: str
+
+class OrderDates(BaseModel):
+    creation_date: int
+    expected_finish_date: int
+
+class OrderDetails(BaseModel):
+    out_order_code: str
+    order_type: int
+    out_wave_code: str
+    owner_code: str
+    is_allow_pick_lack: int
+    print: PrintDetails
+    carrier: CarrierDetails
+    is_allow_lack: int
+    dates: OrderDates
+    priority: int
+
+class SkuItem(BaseModel):
+    sku_code: str
+    sku_id: str
+    out_batch_code: Optional[str] = None
+    sku_level: int
+    amount: int
+    production_date: Optional[int] = None
+    expiration_date: Optional[int] = None
+
+class Order(BaseModel):
+    order_details: OrderDetails
+    sku_items: List[SkuItem]
+
+class PickOrderRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[Order]]
+
+@app.post("/api/pick/create")
+async def pick_order_create(request: PickOrderRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles Pick Order Creation"""
+
+    logging.info(f"Pick Order Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received Pick Order Request: {request.dict()}")
+
+    return {
+        "message": "Pick Order Created Successfully",
+        "warehouse": warehouse,
+        "owner": owner,
+        "order_count": len(request.body["orders"]),
+    }
+
+
+# ========================= PICK ORDER CONFIRMATION =========================
+class OrderDates(BaseModel):
+    production_date: int
+    expiration_date: int
+
+class SerialNumber(BaseModel):
+    sequence_no: str
+
+class SkuItem(BaseModel):
+    item: int
+    sku_code: str
+    bar_code: Optional[str] = None
+    sku_level: int
+    plan_amount: int
+    pickup_amount: int
+    out_batch_code: Optional[str] = None
+    dates: OrderDates
+    remark: Optional[str] = None
+    owner_code: str
+    sn_list: Optional[List[SerialNumber]] = None
+
+class ContainerSkuItem(BaseModel):
+    item: int
+    sku_code: str
+    bar_code: Optional[str] = None
+    sku_level: int
+    amount: int
+    out_batch_code: Optional[str] = None
+    dates: OrderDates
+    owner_code: str
+    sn_list: Optional[List[SerialNumber]] = None
+
+class ContainerDetails(BaseModel):
+    picker: str
+    container_code: str
+    sku_amount: int
+    sku_type_amount: int
+    creation_date: int
+    sku_items: List[ContainerSkuItem]
+
+class OrderDetails(BaseModel):
+    out_order_code: str
+    status: int
+    warehouse_code: str
+    owner_code: str
+    is_exception: int
+    order_type: int
+    plan_sku_amount: int
+    pickup_sku_amount: int
+    pick_type: int
+    lack_flag: int
+    container_amount: int
+    finish_date: int
+
+class Order(BaseModel):
+    order_details: OrderDetails
+    sku_items: List[SkuItem]
+    containers: List[ContainerDetails]
+
+class PickOrderConfirmRequest(BaseModel):
+    header: Dict[str, str]
+    body: Dict[str, List[Order]]
+
+@app.post("/api/pick/confirm")
+async def pick_order_confirm(request: PickOrderConfirmRequest, warehouse: str = Query(...), owner: str = Query(...)):
+    """Handles Pick Order Confirmation"""
+
+    logging.info(f"Pick Order Confirmation Request: Warehouse: {warehouse}, Owner: {owner}, Data: {request.dict()}")
+    print(f"Received Pick Order Confirmation Request: {request.dict()}")
+
+    return {
+        "message": "Pick Order Confirmed Successfully",
+        "warehouse": warehouse,
+        "owner": owner,
+        "order_count": len(request.body["orders"]),
+    }
+

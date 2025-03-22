@@ -1,0 +1,1 @@
+2025-03-21 23:32:31,934 - Received order: {'order_type': 'Pick Order Creation', 'sku': 'SKU12345', 'quantity': 10, 'location': 'Aisle 3, Shelf 2'}
